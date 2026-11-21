@@ -4,6 +4,7 @@ public class FirstDoor : MonoBehaviour, IInteractable
 {
     public GameManager gameManager;
     public Animator animator;
+    public Collider doorCollider;
 
     public string GetMessage()
     {
@@ -14,10 +15,15 @@ public class FirstDoor : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        if (gameManager.hasKey)
+        if (!gameManager.hasKey) return;
+
+        animator.SetTrigger("Open");
+
+        if (doorCollider != null)
         {
-            animator.SetTrigger("Open");
-            gameManager.firstDoorOpened = true;
+            doorCollider.enabled = false;
         }
+
+        gameManager.firstDoorOpened = true;
     }
 }

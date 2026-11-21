@@ -1,16 +1,17 @@
 using UnityEngine;
 
-public class PickUpRecord : MonoBehaviour
+public class PickUpRecord : MonoBehaviour, IInteractable
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public GameManager gameManager;
+
+    public string GetMessage()
     {
-        
+        return "Press E to take the vinyl record";
     }
 
-    // Update is called once per frame
-    void Update()
+    public void Interact()
     {
-        
+        gameManager.hasRecord = true;
+        gameObject.SetActive(false);
     }
 }
