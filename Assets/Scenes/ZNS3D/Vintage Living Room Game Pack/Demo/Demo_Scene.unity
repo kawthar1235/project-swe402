@@ -1167,6 +1167,10 @@ PrefabInstance:
       value: tv
       objectReference: {fileID: 0}
     - target: {fileID: 3622243103439998288, guid: 42a7acd56b9b4c44f91e4d393ed2adc8, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3622243103439998288, guid: 42a7acd56b9b4c44f91e4d393ed2adc8, type: 3}
       propertyPath: m_TagString
       value: TV
       objectReference: {fileID: 0}
@@ -13220,7 +13224,7 @@ GameObject:
   - component: {fileID: 1352498735}
   m_Layer: 0
   m_Name: FlashlightBeam
-  m_TagString: Untagged
+  m_TagString: FlashlightBeam
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -13233,7 +13237,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1352498730}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.48632887, y: -0.26989084, z: -0.4636692, w: -0.6896767}
+  m_LocalRotation: {x: 0.4863289, y: -0.26989087, z: -0.4636692, w: -0.68967676}
   m_LocalPosition: {x: 0.000000014901161, y: 0.16100007, z: 0.019999906}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -15508,9 +15512,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TVInteraction
   gameManager: {fileID: 1061436666}
-  playerCamera: {fileID: 0}
+  playerCamera: {fileID: 735583293}
   videoScreen: {fileID: 1487029945}
-  screenImage: {fileID: 0}
+  screenImage: {fileID: 2800000, guid: 076eb4f31dfc14be892bfced9ca1d36f, type: 3}
   tvSound: {fileID: 0}
   volume: 0.4
   noiseStrength: 0.07
@@ -20341,9 +20345,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlashlightPickup
   gameManager: {fileID: 1061436666}
-  playerCamera: {fileID: 0}
-  holdPoint: {fileID: 0}
-  pickupDistance: 3
+  playerCamera: {fileID: 735583293}
+  holdPoint: {fileID: 451706425}
+  pickupDistance: 4
   heldLength: 0.22
   heldRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &1905493073

@@ -13,7 +13,7 @@ public class TVInteraction : MonoBehaviour, IInteractable
     public AudioClip tvSound;
 
     [Range(0f, 1f)]
-    public float volume = 0.4f;
+    public float volume = 0.04f;
 
     [Header("Effects")]
     [Range(0f, 0.3f)]

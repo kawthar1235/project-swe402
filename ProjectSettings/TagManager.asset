@@ -10,6 +10,7 @@ TagManager:
   - SecondRoomDoor
   - TV
   - Flashlight
+  - FlashlightBeam
   layers:
   - Default
   - TransparentFX
