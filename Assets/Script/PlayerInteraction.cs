@@ -1,6 +1,10 @@
 using UnityEngine;
 using TMPro;
 
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
 public class PlayerInteraction : MonoBehaviour
 {
     public Camera playerCamera;
@@ -9,29 +13,90 @@ public class PlayerInteraction : MonoBehaviour
 
     void Update()
     {
-        Ray ray = new Ray(
-            playerCamera.transform.position,
-            playerCamera.transform.forward
+        if (playerCamera == null)
+        {
+            ClearMessage();
+            return;
+        }
+
+        Vector2 mousePosition;
+        bool clicked;
+        bool pressedE;
+
+#if ENABLE_INPUT_SYSTEM
+        mousePosition = Mouse.current != null
+            ? Mouse.current.position.ReadValue()
+            : Vector2.zero;
+
+        clicked = Mouse.current != null &&
+            Mouse.current.leftButton.wasPressedThisFrame;
+
+        pressedE = Keyboard.current != null &&
+            Keyboard.current.eKey.wasPressedThisFrame;
+#else
+        mousePosition = Input.mousePosition;
+        clicked = Input.GetMouseButtonDown(0);
+        pressedE = Input.GetKeyDown(KeyCode.E);
+#endif
+
+        Ray ray = Cursor.lockState == CursorLockMode.Locked
+            ? playerCamera.ViewportPointToRay(
+                new Vector3(0.5f, 0.5f, 0f))
+            : playerCamera.ScreenPointToRay(mousePosition);
+
+        RaycastHit[] hits = Physics.RaycastAll(
+            ray,
+            interactionDistance,
+            ~0,
+            QueryTriggerInteraction.Ignore
         );
 
-        if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance))
+        System.Array.Sort(
+            hits,
+            (a, b) => a.distance.CompareTo(b.distance)
+        );
+
+        foreach (RaycastHit hit in hits)
         {
-            IInteractable interactable =
-                hit.collider.GetComponent<IInteractable>();
+            // åĞÇ ÇáÓßÑÈÊ ãæÌæÏ Úáì Player:
+            // äÊÌÇåá ßæáíÏÑÇÊ ÇááÇÚÈÉ æÃÈäÇÆåÇ.
+            if (hit.collider.transform.IsChildOf(transform))
+                continue;
 
-            if (interactable != null)
+            IInteractable target =
+                hit.collider.GetComponentInParent<IInteractable>();
+
+            if (target != null)
             {
-                messageText.text = interactable.GetMessage();
+                string message = target.GetMessage();
 
-                if (Input.GetKeyDown(KeyCode.E))
+                if (messageText != null)
+                    messageText.text = message;
+
+                if (!string.IsNullOrEmpty(message) &&
+                    (clicked || pressedE))
                 {
-                    interactable.Interact();
+                    target.Interact();
                 }
 
                 return;
             }
+
+            // Ãæá ÌÓã ÂÎÑ íÍÌÈ ÇáÊİÇÚá ãÚ ãÇ æÑÇÁå.
+            break;
         }
 
-        messageText.text = "";
+        ClearMessage();
+    }
+
+    private void ClearMessage()
+    {
+        if (messageText != null)
+            messageText.text = "";
+    }
+
+    void OnDisable()
+    {
+        ClearMessage();
     }
 }
