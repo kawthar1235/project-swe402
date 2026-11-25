@@ -1228,6 +1228,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3622243103439998288, guid: 42a7acd56b9b4c44f91e4d393ed2adc8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1521935580}
+    - targetCorrespondingSourceObject: {fileID: 3622243103439998288, guid: 42a7acd56b9b4c44f91e4d393ed2adc8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1521935583}
   m_SourcePrefab: {fileID: 100100000, guid: 42a7acd56b9b4c44f91e4d393ed2adc8, type: 3}
 --- !u!4 &147235852 stripped
 Transform:
@@ -2545,7 +2548,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 80
-  m_CollisionDetection: 2
+  m_CollisionDetection: 3
 --- !u!114 &263841176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2988,7 +2991,7 @@ Transform:
   m_GameObject: {fileID: 294165332}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -1.0679, y: -2.7165298, z: 0.6617799}
+  m_LocalPosition: {x: -1.307, y: 0.0002056956, z: 4.723}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10452,6 +10455,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100000, guid: b694b8ec5c41f6247843a2b67222fda6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1905493072}
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: b694b8ec5c41f6247843a2b67222fda6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1905493078}
+    - targetCorrespondingSourceObject: {fileID: 100000, guid: b694b8ec5c41f6247843a2b67222fda6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1905493077}
   m_SourcePrefab: {fileID: 100100000, guid: b694b8ec5c41f6247843a2b67222fda6, type: 3}
 --- !u!4 &1093851367 stripped
 Transform:
@@ -11252,11 +11261,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e630d48ae84794a869a4e6a5c42d0b59, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SafeRoomDoor
-  playerCamera: {fileID: 0}
-  leftDoor: {fileID: 0}
-  rightDoor: {fileID: 0}
-  leftHinge: {fileID: 0}
-  rightHinge: {fileID: 0}
+  playerCamera: {fileID: 735583293}
+  leftDoor: {fileID: 1887566011}
+  rightDoor: {fileID: 1452496823}
+  leftHinge: {fileID: 354255399}
+  rightHinge: {fileID: 1451542600}
   openAngle: 90
   rotationSpeed: 120
   interactionDistance: 3
@@ -13418,7 +13427,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 238babc9462554d838a462d306d2b6b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SafeRoomTrigger
-  safeRoomDoor: {fileID: 0}
+  safeRoomDoor: {fileID: 1146647375}
 --- !u!65 &1352976406
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -14397,6 +14406,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.8699875, y: 1.8685087, z: 0.14086866}
   m_Center: {x: 0.43450755, y: 0.93425435, z: 0.023651585}
+--- !u!4 &1452496823 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1595269521309589783, guid: eb9807c1a83926347ba8ac724bbf8af3, type: 3}
+  m_PrefabInstance: {fileID: 1146647371}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1452865477
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15520,6 +15534,27 @@ MonoBehaviour:
   noiseStrength: 0.07
   glowIntensity: 2
   interactionDistance: 3
+--- !u!65 &1521935583
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1521935577}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.6696775, y: 0.70685667, z: 0.5557949}
+  m_Center: {x: -0.0016363412, y: 0.35342833, z: -0.010211527}
 --- !u!1 &1522324528 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8866188851930244280, guid: a4b1276aff9e45d40818904c02bf6545, type: 3}
@@ -18540,7 +18575,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1725105916
 Transform:
   m_ObjectHideFlags: 0
@@ -20253,6 +20288,11 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.8699875, y: 1.8685087, z: 0.14086866}
   m_Center: {x: -0.43450737, y: 0.93425435, z: 0.023651367}
+--- !u!4 &1887566011 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4417433188558306262, guid: eb9807c1a83926347ba8ac724bbf8af3, type: 3}
+  m_PrefabInstance: {fileID: 1146647371}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1890236766
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20363,6 +20403,54 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlashlightControl
   flashlightLight: {fileID: 1352498733}
+--- !u!65 &1905493077
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1905493068}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!54 &1905493078
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1905493068}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!1001 &1907847597
 PrefabInstance:
   m_ObjectHideFlags: 0

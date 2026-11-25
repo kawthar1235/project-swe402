@@ -188,44 +188,27 @@ public class TVInteraction : MonoBehaviour, IInteractable
     }
 
     private void Update()
+{
+    if (!ready)
+        return;
+
+    if (isOn)
     {
-        if (!ready)
-            return;
+        speaker.volume = volume;
 
-        if (isOn)
+        screenGlow.intensity = Mathf.Max(
+            0f,
+            glowIntensity *
+            (0.9f + (float)random.NextDouble() * 0.2f)
+        );
+
+        if (Time.time >= nextFrameTime)
         {
-            speaker.volume = volume;
-
-            screenGlow.intensity = Mathf.Max(
-                0f,
-                glowIntensity *
-                (0.9f + (float)random.NextDouble() * 0.2f)
-            );
-
-            // Update the noisy picture at a low frame rate.
-            if (Time.time >= nextFrameTime)
-            {
-                nextFrameTime = Time.time + 1f / 12f;
-                UpdatePicture();
-            }
-        }
-
-        if (ChestPuzzleTools.Inspecting ||
-            !ChestPuzzleTools.Clicked())
-            return;
-
-        if (ChestPuzzleTools.Raycast(
-            playerCamera,
-            interactionDistance,
-            out RaycastHit hit))
-        {
-            if (hit.collider
-                .GetComponentInParent<TVInteraction>() == this)
-            {
-                Interact();
-            }
+            nextFrameTime = Time.time + 1f / 12f;
+            UpdatePicture();
         }
     }
+}
 
     public string GetMessage()
     {

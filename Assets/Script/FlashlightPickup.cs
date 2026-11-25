@@ -1,5 +1,8 @@
+
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(BoxCollider))]
 public class FlashlightPickup : MonoBehaviour, IInteractable
 {
     public GameManager gameManager;
@@ -12,7 +15,9 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     public bool IsHeld => held;
 
+    private bool canPickUp = true;
     private bool held;
+
     private Rigidbody body;
     private Collider[] colliders;
     private bool[] colliderStates;
@@ -21,18 +26,12 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
     {
         body = GetComponent<Rigidbody>();
 
-        if (body == null)
-            body = gameObject.AddComponent<Rigidbody>();
-
-        ChestPuzzleTools.EnsureCollider(gameObject);
-
         colliders = GetComponentsInChildren<Collider>(true);
         colliderStates = new bool[colliders.Length];
 
         for (int i = 0; i < colliders.Length; i++)
             colliderStates[i] = colliders[i].enabled;
 
-        // Keep the flashlight in its starting position until picked up.
         body.isKinematic = true;
         body.useGravity = false;
 
@@ -53,16 +52,10 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     private void Update()
     {
-        if (ChestPuzzleTools.Inspecting)
+        if (!canPickUp ||
+            held ||
+            ChestPuzzleTools.Inspecting)
             return;
-
-        if (held)
-        {
-            if (ChestPuzzleTools.SpacePressed())
-                Drop();
-
-            return;
-        }
 
         if (!ChestPuzzleTools.Clicked())
             return;
@@ -72,8 +65,8 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
             pickupDistance,
             out RaycastHit hit))
         {
-            if (hit.collider
-                .GetComponentInParent<FlashlightPickup>() == this)
+            if (hit.collider.GetComponentInParent<FlashlightPickup>()
+                == this)
             {
                 Interact();
             }
@@ -82,40 +75,58 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     public string GetMessage()
     {
-        return held ? "" : "Click to take flashlight";
+        return !canPickUp || held
+            ? ""
+            : "Click to take flashlight";
     }
 
     public void Interact()
     {
-        if (held || ChestPuzzleTools.Inspecting)
+        if (!canPickUp ||
+            held ||
+            ChestPuzzleTools.Inspecting)
             return;
 
         if (holdPoint == null || playerCamera == null)
         {
             Debug.LogWarning(
-                "Assign Player Camera and Hold Point.", this);
+                "Assign Player Camera and Hold Point.",
+                this
+            );
             return;
         }
 
-        // Prevent picking up the flashlight over an already held item.
         foreach (PickUpRecord record in
             holdPoint.GetComponentsInChildren<PickUpRecord>())
         {
             if (record.IsHeld)
+            {
+                Debug.Log(
+                    "Put down the record before taking the flashlight.",
+                    this
+                );
                 return;
+            }
         }
 
         foreach (KeyPickup key in
             holdPoint.GetComponentsInChildren<KeyPickup>())
         {
             if (key.IsHeld)
+            {
+                Debug.Log(
+                    "Put down the key before taking the flashlight.",
+                    this
+                );
                 return;
+            }
         }
 
-        Bounds bounds = ChestPuzzleTools.LocalBounds(transform);
+        Bounds bounds =
+            ChestPuzzleTools.LocalBounds(transform);
+
         Vector3 size = bounds.size;
 
-        // Align the longest model axis with the camera's forward axis.
         int longAxis = 0;
 
         if (size.y > size[longAxis])
@@ -127,10 +138,11 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
         Vector3 modelForward = Vector3.zero;
         modelForward[longAxis] = 1f;
 
-        Quaternion alignment = Quaternion.FromToRotation(
-            modelForward,
-            Vector3.forward
-        );
+        Quaternion alignment =
+            Quaternion.FromToRotation(
+                modelForward,
+                Vector3.forward
+            );
 
         body.isKinematic = true;
         body.useGravity = false;
@@ -151,13 +163,17 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
         float scale =
             heldLength / Mathf.Max(length, 0.001f);
 
-        transform.localScale = Vector3.one * scale;
+        transform.localScale =
+            Vector3.one * scale;
 
-        // Center the mesh on the existing hand position.
-        transform.localPosition = -(
-            transform.localRotation *
-            Vector3.Scale(bounds.center, transform.localScale)
-        );
+        transform.localPosition =
+            -(
+                transform.localRotation *
+                Vector3.Scale(
+                    bounds.center,
+                    transform.localScale
+                )
+            );
 
         held = true;
 
@@ -174,6 +190,9 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
         body.isKinematic = false;
         body.useGravity = true;
+        body.collisionDetectionMode =
+            CollisionDetectionMode.ContinuousDynamic;
+
         body.linearVelocity = Vector3.zero;
         body.angularVelocity = Vector3.zero;
 
