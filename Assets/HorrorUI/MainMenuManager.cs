@@ -1,47 +1,71 @@
 
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class MainMenuManager : MonoBehaviour
 {
-    public GameObject menuCanvas;
-    public MonoBehaviour[] playerScripts;
+    [Header("Gameplay Scene")]
+
+#if UNITY_EDITOR
+    public SceneAsset gameplayScene;
+#endif
+
+    [SerializeField, HideInInspector]
+    private string gameplayScenePath;
+
+    [Header("UI Panels")]
+    public GameObject mainMenuContent;
+    public GameObject settingsPanel;
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        gameplayScenePath = gameplayScene != null
+            ? AssetDatabase.GetAssetPath(gameplayScene)
+            : "";
+    }
+#endif
 
     void Start()
     {
-        menuCanvas.SetActive(true);
-
-        Time.timeScale = 0f;
-
-        foreach (MonoBehaviour script in playerScripts)
-        {
-            if (script != null)
-                script.enabled = false;
-        }
-
-        Cursor.lockState = CursorLockMode.None;
+        Time.timeScale = 1f;
         Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+
+        CloseSettings();
     }
 
-    public void StartGame()
+    public void PlayGame()
     {
-        menuCanvas.SetActive(false);
-
-        Time.timeScale = 1f;
-
-        foreach (MonoBehaviour script in playerScripts)
+        if (string.IsNullOrEmpty(gameplayScenePath))
         {
-            if (script != null)
-                script.enabled = true;
+            Debug.LogError("Gameplay Scene is not assigned!");
+            return;
         }
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(gameplayScenePath);
+    }
+
+    public void OpenSettings()
+    {
+        mainMenuContent.SetActive(false);
+        settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        settingsPanel.SetActive(false);
+        mainMenuContent.SetActive(true);
     }
 
     public void QuitGame()
     {
-        Application.Quit();
         Debug.Log("Game Closed");
+        Application.Quit();
     }
 }
-

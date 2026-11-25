@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -10,9 +11,20 @@ public class PlayerMovement : MonoBehaviour
     private float forward;
     private float turn;
 
+    private float speedMultiplier = 1f;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
+        // Load saved movement speed setting
+        speedMultiplier = Mathf.Lerp(
+            0.75f,
+            1.25f,
+            Mathf.Clamp01(
+                PlayerPrefs.GetFloat("MovementSpeed", 0.5f)
+            )
+        );
     }
 
     void Update()
@@ -25,7 +37,8 @@ public class PlayerMovement : MonoBehaviour
     {
         rb.angularVelocity = Vector3.zero;
         Vector3 movement = rb.rotation * Vector3.forward;
-        movement *= forward * moveSpeed;
+
+        movement *= forward * moveSpeed * speedMultiplier;
 
         rb.linearVelocity = new Vector3(
             movement.x,
