@@ -14,13 +14,13 @@ public class MonsterChase : MonoBehaviour
     private Rigidbody rb;
     private Animator animator;
 
-    void Awake()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponentInChildren<Animator>();
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
         if (player == null ||
             corridorStart == null ||
@@ -28,16 +28,19 @@ public class MonsterChase : MonoBehaviour
             corridorEnd == null)
             return;
 
-        Vector3 playerTarget;
-        float distanceToStartSegment =
-            DistanceToSegment(player.position,
-                              corridorStart.position,
-                              corridorCorner.position);
+        float distanceToStartSegment = DistanceToSegment(
+            player.position,
+            corridorStart.position,
+            corridorCorner.position
+        );
 
-        float distanceToEndSegment =
-            DistanceToSegment(player.position,
-                              corridorCorner.position,
-                              corridorEnd.position);
+        float distanceToEndSegment = DistanceToSegment(
+            player.position,
+            corridorCorner.position,
+            corridorEnd.position
+        );
+
+        Vector3 playerTarget;
 
         if (distanceToStartSegment < distanceToEndSegment)
         {
@@ -59,7 +62,8 @@ public class MonsterChase : MonoBehaviour
         Vector3 direction = playerTarget - rb.position;
         direction.y = 0f;
 
-        bool chasing = direction.magnitude > stopDistance;
+        bool chasing =
+            direction.magnitude > stopDistance;
 
         if (animator != null)
             animator.SetBool("IsRunning", chasing);
@@ -69,13 +73,17 @@ public class MonsterChase : MonoBehaviour
 
         direction.Normalize();
 
-        rb.MoveRotation(Quaternion.LookRotation(direction));
+        rb.MoveRotation(
+            Quaternion.LookRotation(direction)
+        );
+
         rb.MovePosition(
-            rb.position + direction * speed * Time.fixedDeltaTime
+            rb.position +
+            direction * speed * Time.fixedDeltaTime
         );
     }
 
-    Vector3 ClosestPointOnSegment(
+    private Vector3 ClosestPointOnSegment(
         Vector3 point,
         Vector3 start,
         Vector3 end)
@@ -86,13 +94,15 @@ public class MonsterChase : MonoBehaviour
         if (length < 0.001f)
             return start;
 
-        float t = Vector3.Dot(point - start, line) / length;
-        t = Mathf.Clamp01(t);
+        float t = Vector3.Dot(
+            point - start,
+            line
+        ) / length;
 
-        return start + line * t;
+        return start + line * Mathf.Clamp01(t);
     }
 
-    float DistanceToSegment(
+    private float DistanceToSegment(
         Vector3 point,
         Vector3 start,
         Vector3 end)
@@ -103,49 +113,3 @@ public class MonsterChase : MonoBehaviour
         );
     }
 }
-
-/*using UnityEngine;
-
-[RequireComponent(typeof(Rigidbody))]
-public class MonsterChase : MonoBehaviour
-{
-    public Transform player;
-    public float speed = 2f;
-    public float stopDistance = 1.5f;
-
-    private Rigidbody rb;
-    private Animator animator;
-
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-        animator = GetComponentInChildren<Animator>();
-    }
-
-    void FixedUpdate()
-    {
-        if (player == null)
-        {
-            Debug.LogWarning("Player is not assigned to MonsterChase.");
-            return;
-        }
-
-        Vector3 direction = player.position - rb.position;
-        direction.y = 0f;
-
-        bool chasing = direction.magnitude > stopDistance;
-
-        if (animator != null)
-            animator.SetBool("IsRunning", chasing);
-
-        if (!chasing) return;
-
-        direction.Normalize();
-
-        rb.MoveRotation(Quaternion.LookRotation(direction));
-
-        rb.MovePosition(
-            rb.position + direction * speed * Time.fixedDeltaTime
-        );
-    }
-}*/
