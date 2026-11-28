@@ -7,6 +7,7 @@ using UnityEngine.Rendering;
 public class PickUpRecord : MonoBehaviour, IInteractable
 {
     public GameManager gameManager;
+    public InventoryUI inventoryUI;
     public Camera playerCamera;
     public Transform holdPoint;
 
@@ -183,11 +184,13 @@ public class PickUpRecord : MonoBehaviour, IInteractable
             transform.localPosition = Vector3.zero;
             transform.localRotation = Quaternion.Euler(heldRotation);
         }
-
         held = true;
 
         if (gameManager != null)
             gameManager.hasRecord = true;
+
+        if (inventoryUI != null)
+            inventoryUI.CollectCD();
 
         feedback?.PlayPickup(pickupVolume);
     }
@@ -218,6 +221,9 @@ public class PickUpRecord : MonoBehaviour, IInteractable
 
         if (gameManager != null)
             gameManager.hasRecord = false;
+
+        if (inventoryUI != null)
+            inventoryUI.UseCD();
     }
 
     public void ReleaseFromPainting()
@@ -289,6 +295,9 @@ public class PickUpRecord : MonoBehaviour, IInteractable
 
         if (gameManager != null)
             gameManager.hasRecord = false;
+
+        if (inventoryUI != null)
+            inventoryUI.UseCD();
     }
 
     private void OnDisable()
@@ -301,6 +310,10 @@ public class PickUpRecord : MonoBehaviour, IInteractable
 
             if (gameManager != null)
                 gameManager.hasRecord = false;
+
+            if (inventoryUI != null)
+                inventoryUI.UseCD();
+                
         }
     }
 

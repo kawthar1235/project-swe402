@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -5,6 +6,7 @@ using UnityEngine;
 public class FlashlightPickup : MonoBehaviour, IInteractable
 {
     public GameManager gameManager;
+    public InventoryUI inventoryUI;
     public Camera playerCamera;
     public Transform holdPoint;
 
@@ -195,6 +197,10 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
         if (gameManager != null)
             gameManager.hasFlashlight = true;
 
+        // Show flashlight in inventory.
+        if (inventoryUI != null)
+            inventoryUI.CollectFlashlight();
+
         feedback?.PlaySound(pickupVolume);
     }
 
@@ -227,14 +233,26 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
         if (gameManager != null)
             gameManager.hasFlashlight = false;
+
+        // Remove flashlight from inventory.
+        if (inventoryUI != null)
+            inventoryUI.RemoveItem(
+                inventoryUI.flashlightSprite);
     }
 
     private void OnDisable()
     {
         feedback?.Highlight(false, playerCamera);
 
-        if (held && gameManager != null)
-            gameManager.hasFlashlight = false;
+        if (held)
+        {
+            if (gameManager != null)
+                gameManager.hasFlashlight = false;
+
+            if (inventoryUI != null)
+                inventoryUI.RemoveItem(
+                    inventoryUI.flashlightSprite);
+        }
 
         held = false;
     }
