@@ -99,10 +99,10 @@ public class WoodenBox : MonoBehaviour, IInteractable
         return target.IsChildOf(transform) ||
             (keypadRoot != null && target.IsChildOf(keypadRoot));
     }
-    public string GetMessage()
-    {
-        return solved || inspecting ? "" : "Click to inspect keypad";
-    }
+   public string GetMessage()
+{
+    return "";
+}
     public void Interact()
     {
         if (solved || inspecting || ChestPuzzleTools.Inspecting) return;
@@ -197,49 +197,53 @@ public class WoodenBox : MonoBehaviour, IInteractable
         solved = true;
         StartCoroutine(BreakBox());
     }
-    private IEnumerator BreakBox()
+   private IEnumerator BreakBox()
+{
+    ChestBoxEffects effects = GetComponent<ChestBoxEffects>();
+
+    if (effects == null)
+        effects = gameObject.AddComponent<ChestBoxEffects>();
+
+    // Use the assigned recording instead of generated noise.
+    PlayBreakSoundSegment();
+
+    effects.Shatter(false);
+
+    foreach (LODGroup group in GetComponentsInChildren<LODGroup>())
+        group.enabled = false;
+
+    foreach (Renderer part in GetComponentsInChildren<Renderer>())
     {
-        if (breakSound != null) speaker.PlayOneShot(breakSound);
-        Bounds local = ChestPuzzleTools.LocalBounds(transform);
-        Bounds world = new Bounds(transform.TransformPoint(local.center), Vector3.zero);
-        foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
-            world.Encapsulate(renderer.bounds);
-        Renderer first = GetComponentInChildren<Renderer>();
-        Material wood = first != null ? first.sharedMaterial : null;
-        foreach (LODGroup group in GetComponentsInChildren<LODGroup>()) group.enabled = false;
-        foreach (Renderer renderer in GetComponentsInChildren<Renderer>()) renderer.enabled = false;
-        foreach (Collider col in GetComponentsInChildren<Collider>()) col.enabled = false;
+        if (key != null && part.transform.IsChildOf(key.transform))
+            continue;
+
+        part.enabled = false;
+    }
+
+    foreach (Collider col in GetComponentsInChildren<Collider>())
+    {
+        if (key != null && col.transform.IsChildOf(key.transform))
+            continue;
+
+        col.enabled = false;
+    }
+
+    if (keypadRoot != null)
         keypadRoot.gameObject.SetActive(false);
-        // Visual substitute for a fractured model: temporary physical wood blocks.
-        GameObject[] pieces = new GameObject[18];
-        Collider[] playerColliders = playerBody != null
-            ? playerBody.GetComponentsInChildren<Collider>() : new Collider[0];
-        for (int i = 0; i < pieces.Length; i++)
-        {
-            GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            pieces[i] = piece;
-            piece.name = "BoxFragment";
-            piece.transform.position = world.center + Vector3.Scale(world.size,
-                new Vector3((i % 3 - 1) / 3f, ((i / 3) % 2 - 0.5f) / 2f,
-                            (i / 6 - 1) / 3f));
-            piece.transform.localScale = Vector3.Scale(world.size, new Vector3(0.28f, 0.32f, 0.28f));
-            if (wood != null) piece.GetComponent<Renderer>().sharedMaterial = wood;
-            Collider col = piece.GetComponent<Collider>();
-            foreach (Collider playerCol in playerColliders) Physics.IgnoreCollision(col, playerCol);
-            for (int j = 0; j < i; j++) Physics.IgnoreCollision(col, pieces[j].GetComponent<Collider>());
-            Rigidbody body = piece.AddComponent<Rigidbody>();
-            body.mass = 0.05f;
-            body.linearVelocity = (piece.transform.position - world.center).normalized * 1.4f + Vector3.up;
-            body.angularVelocity = Random.insideUnitSphere * 6f;
-            Destroy(piece, 1.5f);
-        }
-        yield return new WaitForSeconds(0.65f);
-        ExitView();
-        yield return new WaitForSeconds(0.9f);
-        key.transform.SetParent(null, true); // Also supports a key placed inside the box hierarchy.
+
+    yield return new WaitForSeconds(0.45f);
+
+    ExitView();
+
+    yield return new WaitForSeconds(0.45f);
+
+    if (key != null)
+    {
+        key.transform.SetParent(null, true);
         key.SetActive(true);
         key.GetComponent<KeyPickup>().Reveal();
     }
+}
     void OnGUI()
     {
         if (!inspecting || solved || displayPoint == null || enteredCode.Length == 0) return;
@@ -265,4 +269,56 @@ public class WoodenBox : MonoBehaviour, IInteractable
         if (generatedClick != null) Destroy(generatedClick);
         if (generatedWrong != null) Destroy(generatedWrong);
     }
+    private void PlayBreakSoundSegment()
+{
+    if (breakSound == null)
+        return;
+
+    const float start = 3f;
+    float end = Mathf.Min(5f, breakSound.length);
+
+    if (end <= start)
+    {
+        Debug.LogWarning(
+            "Break Sound must be longer than 3 seconds.",
+            this);
+        return;
+    }
+
+    float duration = end - start;
+
+    // A separate source avoids cutting off other chest sounds.
+    GameObject soundObject =
+        new GameObject("Chest Break Sound");
+
+    soundObject.transform.position = transform.position;
+
+    AudioSource source =
+        soundObject.AddComponent<AudioSource>();
+
+    source.playOnAwake = false;
+    source.loop = false;
+    source.clip = breakSound;
+    source.pitch = 1f;
+
+    source.volume = speaker != null
+        ? speaker.volume * 0.65f
+        : 0.65f;
+
+    source.spatialBlend = speaker != null
+        ? speaker.spatialBlend
+        : 0f;
+
+    if (speaker != null)
+        source.outputAudioMixerGroup = speaker.outputAudioMixerGroup;
+
+    source.time = start;
+
+    double playAt = AudioSettings.dspTime + 0.05;
+
+    source.PlayScheduled(playAt);
+    source.SetScheduledEndTime(playAt + duration);
+
+    Destroy(soundObject, duration + 0.2f);
+}
 }

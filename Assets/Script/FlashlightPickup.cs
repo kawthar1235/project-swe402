@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -13,6 +12,9 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
     public float heldLength = 0.22f;
     public Vector3 heldRotation = Vector3.zero;
 
+    [Range(0f, 1f)]
+    public float pickupVolume = 0.35f;
+
     public bool IsHeld => held;
 
     private bool canPickUp = true;
@@ -21,6 +23,9 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
     private Rigidbody body;
     private Collider[] colliders;
     private bool[] colliderStates;
+
+    private Bounds modelBounds;
+    private KeyFlashPickupFeedback feedback;
 
     private void Awake()
     {
@@ -31,6 +36,8 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
         for (int i = 0; i < colliders.Length; i++)
             colliderStates[i] = colliders[i].enabled;
+
+        modelBounds = ChestPuzzleTools.LocalBounds(transform);
 
         body.isKinematic = true;
         body.useGravity = false;
@@ -43,6 +50,12 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     private void Start()
     {
+        ResolveReferences();
+        feedback = new KeyFlashPickupFeedback(transform, false);
+    }
+
+    private void ResolveReferences()
+    {
         playerCamera =
             ChestPuzzleTools.ResolveCamera(playerCamera);
 
@@ -52,32 +65,53 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     private void Update()
     {
-        if (!canPickUp ||
-            held ||
-            ChestPuzzleTools.Inspecting)
+        if (ChestPuzzleTools.Inspecting)
+        {
+            feedback?.Highlight(false, playerCamera);
             return;
+        }
 
-        if (!ChestPuzzleTools.Clicked())
+        // Check Space before returning from the held state.
+        if (held)
+        {
+            feedback?.Highlight(false, playerCamera);
+
+            if (ChestPuzzleTools.SpacePressed())
+                Drop();
+
             return;
+        }
+
+        if (!canPickUp)
+        {
+            feedback?.Highlight(false, playerCamera);
+            return;
+        }
+
+        if (playerCamera == null)
+            ResolveReferences();
+
+        bool hovered = false;
 
         if (ChestPuzzleTools.Raycast(
             playerCamera,
             pickupDistance,
             out RaycastHit hit))
         {
-            if (hit.collider.GetComponentInParent<FlashlightPickup>()
-                == this)
-            {
-                Interact();
-            }
+            hovered =
+                hit.collider.GetComponentInParent<FlashlightPickup>()
+                == this;
         }
+
+        feedback?.Highlight(hovered, playerCamera);
+
+        if (hovered && ChestPuzzleTools.Clicked())
+            Interact();
     }
 
     public string GetMessage()
     {
-        return !canPickUp || held
-            ? ""
-            : "Click to take flashlight";
+        return "";
     }
 
     public void Interact()
@@ -87,12 +121,13 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
             ChestPuzzleTools.Inspecting)
             return;
 
+        ResolveReferences();
+
         if (holdPoint == null || playerCamera == null)
         {
             Debug.LogWarning(
-                "Assign Player Camera and Hold Point.",
-                this
-            );
+                "Flashlight: assign Player Camera and Hold Point.",
+                this);
             return;
         }
 
@@ -100,33 +135,19 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
             holdPoint.GetComponentsInChildren<PickUpRecord>())
         {
             if (record.IsHeld)
-            {
-                Debug.Log(
-                    "Put down the record before taking the flashlight.",
-                    this
-                );
                 return;
-            }
         }
 
         foreach (KeyPickup key in
             holdPoint.GetComponentsInChildren<KeyPickup>())
         {
             if (key.IsHeld)
-            {
-                Debug.Log(
-                    "Put down the key before taking the flashlight.",
-                    this
-                );
                 return;
-            }
         }
 
-        Bounds bounds =
-            ChestPuzzleTools.LocalBounds(transform);
+        feedback?.Highlight(false, playerCamera);
 
-        Vector3 size = bounds.size;
-
+        Vector3 size = modelBounds.size;
         int longAxis = 0;
 
         if (size.y > size[longAxis])
@@ -140,15 +161,16 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
         Quaternion alignment =
             Quaternion.FromToRotation(
-                modelForward,
-                Vector3.forward
-            );
+                modelForward, Vector3.forward);
 
         body.isKinematic = true;
         body.useGravity = false;
 
         foreach (Collider col in colliders)
-            col.enabled = false;
+        {
+            if (col != null)
+                col.enabled = false;
+        }
 
         transform.SetParent(holdPoint, false);
 
@@ -156,45 +178,50 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
             Quaternion.Euler(heldRotation) * alignment;
 
         float length = Mathf.Max(
-            size.x,
-            Mathf.Max(size.y, size.z)
-        );
+            size.x, Mathf.Max(size.y, size.z));
 
         float scale =
             heldLength / Mathf.Max(length, 0.001f);
 
-        transform.localScale =
-            Vector3.one * scale;
+        transform.localScale = Vector3.one * scale;
 
         transform.localPosition =
-            -(
-                transform.localRotation *
-                Vector3.Scale(
-                    bounds.center,
-                    transform.localScale
-                )
-            );
+            -(transform.localRotation *
+              Vector3.Scale(
+                  modelBounds.center, transform.localScale));
 
         held = true;
 
         if (gameManager != null)
             gameManager.hasFlashlight = true;
+
+        feedback?.PlaySound(pickupVolume);
     }
 
-    private void Drop()
+    public void Drop()
     {
+        if (!held)
+            return;
+
+        feedback?.Highlight(false, playerCamera);
+
         transform.SetParent(null, true);
 
         for (int i = 0; i < colliders.Length; i++)
-            colliders[i].enabled = colliderStates[i];
+        {
+            if (colliders[i] != null)
+                colliders[i].enabled = colliderStates[i];
+        }
 
         body.isKinematic = false;
         body.useGravity = true;
+
         body.collisionDetectionMode =
             CollisionDetectionMode.ContinuousDynamic;
 
         body.linearVelocity = Vector3.zero;
         body.angularVelocity = Vector3.zero;
+        body.WakeUp();
 
         held = false;
 
@@ -204,9 +231,16 @@ public class FlashlightPickup : MonoBehaviour, IInteractable
 
     private void OnDisable()
     {
+        feedback?.Highlight(false, playerCamera);
+
         if (held && gameManager != null)
             gameManager.hasFlashlight = false;
 
         held = false;
+    }
+
+    private void OnDestroy()
+    {
+        feedback?.Dispose();
     }
 }

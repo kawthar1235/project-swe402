@@ -22,11 +22,20 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
     [Header("Lockdown")]
     public float lockSeconds = 30f;
 
-    [Header("Opening sound")]
+    [Header("Optional opening sound")]
     public AudioClip doorOpenSound;
 
     [Range(0f, 1f)]
-    public float openingVolume = 1f;
+    public float openingVolume = 0.55f;
+
+    [Header("Optional closing sound")]
+    public AudioClip doorCloseSound;
+
+    [Range(0f, 1f)]
+    public float closingVolume = 0.55f;
+
+    [Header("Sound distance")]
+    public float soundDistance = 10f;
 
     [Header("Countdown effects")]
     [Range(0f, 0.3f)]
@@ -38,7 +47,9 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
     private bool isOpen;
     private bool locked;
     private bool timerStarted;
+    private bool lockdownRunning;
     private bool initialized;
+    private bool closingSoundPending;
 
     private float currentAngle;
     private int lastClickFrame = -1;
@@ -46,13 +57,19 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
 
     private Vector3 leftClosedPosition;
     private Vector3 rightClosedPosition;
+
     private Quaternion leftClosedRotation;
     private Quaternion rightClosedRotation;
 
-    private AudioSource openingSpeaker;
-    private AudioClip generatedImpact;
+    private AudioSource speaker;
+    private AudioClip generatedOpen;
+    private AudioClip generatedClose;
+
     private Texture2D noiseTexture;
     private GUIStyle countdownStyle;
+
+    private KeyFlashPickupFeedback leftFeedback;
+    private KeyFlashPickupFeedback rightFeedback;
 
     private bool Ready =>
         leftDoor != null &&
@@ -73,14 +90,14 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
         if (!Ready)
         {
             Debug.LogWarning(
-                "Assign both doors and both hinges.", this);
+                "Assign both doors and both hinges.",
+                this);
             return false;
         }
 
         playerCamera =
             ChestPuzzleTools.ResolveCamera(playerCamera);
 
-        // Disable existing animation to prevent movement conflicts.
         foreach (Animator oldAnimator in
             GetComponentsInChildren<Animator>(true))
         {
@@ -93,6 +110,21 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
         leftClosedRotation = leftDoor.rotation;
         rightClosedRotation = rightDoor.rotation;
 
+        speaker = gameObject.AddComponent<AudioSource>();
+        speaker.playOnAwake = false;
+        speaker.loop = false;
+        speaker.spatialBlend = 1f;
+        speaker.minDistance = 1f;
+        speaker.maxDistance = Mathf.Max(soundDistance, 1.1f);
+        speaker.rolloffMode = AudioRolloffMode.Linear;
+        speaker.dopplerLevel = 0f;
+
+        leftFeedback =
+            new KeyFlashPickupFeedback(leftDoor, true);
+
+        rightFeedback =
+            new KeyFlashPickupFeedback(rightDoor, true);
+
         initialized = true;
         return true;
     }
@@ -104,21 +136,40 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
 
         MoveDoors();
 
-        if (ChestPuzzleTools.Inspecting ||
-            !ChestPuzzleTools.Clicked())
+        if (playerCamera == null)
+        {
+            playerCamera =
+                ChestPuzzleTools.ResolveCamera(playerCamera);
+        }
+
+        if (ChestPuzzleTools.Inspecting)
+        {
+            Highlight(false);
             return;
+        }
+
+        bool hovered = false;
 
         if (ChestPuzzleTools.Raycast(
             playerCamera,
             interactionDistance,
             out RaycastHit hit))
         {
-            if (hit.collider
-                .GetComponentInParent<SafeRoomDoor>() == this)
-            {
-                Interact();
-            }
+            hovered =
+                hit.collider.GetComponentInParent<SafeRoomDoor>()
+                == this;
         }
+
+        Highlight(hovered);
+
+        if (hovered && ChestPuzzleTools.Clicked())
+            Interact();
+    }
+
+    private void Highlight(bool visible)
+    {
+        leftFeedback?.Highlight(visible, playerCamera);
+        rightFeedback?.Highlight(visible, playerCamera);
     }
 
     private void MoveDoors()
@@ -131,38 +182,56 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
         float nextAngle = Mathf.MoveTowards(
             currentAngle,
             targetAngle,
-            Mathf.Max(rotationSpeed, 1f) * Time.deltaTime
-        );
+            Mathf.Max(rotationSpeed, 1f) * Time.deltaTime);
 
         float change = nextAngle - currentAngle;
 
-        // Rotate each panel around its outer hinge.
         leftDoor.RotateAround(
             leftHinge.position,
             leftHinge.up,
-            change
-        );
+            change);
 
         rightDoor.RotateAround(
             rightHinge.position,
             rightHinge.up,
-            -change
-        );
+            -change);
 
         currentAngle = nextAngle;
 
-        // Restore the exact closed pose to prevent accumulated drift.
         if (!isOpen && currentAngle == 0f)
         {
             leftDoor.SetPositionAndRotation(
                 leftClosedPosition,
-                leftClosedRotation
-            );
+                leftClosedRotation);
 
             rightDoor.SetPositionAndRotation(
                 rightClosedPosition,
-                rightClosedRotation
-            );
+                rightClosedRotation);
+
+            if (closingSoundPending)
+            {
+                closingSoundPending = false;
+                PlayDoorSound(false);
+            }
+        }
+    }
+
+    private void SetDoorOpen(bool open)
+    {
+        if (isOpen == open)
+            return;
+
+        isOpen = open;
+
+        if (open)
+        {
+            closingSoundPending = false;
+            PlayDoorSound(true);
+        }
+        else
+        {
+            // Play the closing impact when the panels reach the frame.
+            closingSoundPending = currentAngle != 0f;
         }
     }
 
@@ -188,9 +257,8 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
             lastClickFrame == Time.frameCount)
             return;
 
-        // Prevent duplicate interaction from multiple input scripts.
         lastClickFrame = Time.frameCount;
-        isOpen = !isOpen;
+        SetDoorOpen(!isOpen);
     }
 
     public void StartLockdown()
@@ -202,16 +270,19 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
             return;
 
         timerStarted = true;
+        lockdownRunning = true;
+
         StartCoroutine(Lockdown());
     }
 
     private IEnumerator Lockdown()
     {
         locked = true;
-        isOpen = false;
         countdown = -1;
 
-        // Start the timer only after both panels are fully closed.
+        SetDoorOpen(false);
+
+        // Wait until both panels finish closing.
         while (currentAngle != 0f)
             yield return null;
 
@@ -219,7 +290,6 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
 
         while (remaining > 0f)
         {
-            // Show the countdown and effects during the final five seconds.
             countdown = remaining <= 5f
                 ? Mathf.CeilToInt(remaining)
                 : -1;
@@ -233,97 +303,163 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
 
         countdown = -1;
         locked = false;
-        isOpen = true;
+        lockdownRunning = false;
 
-        PlayOpeningSound();
+        // Automatic opening uses the same opening sound.
+        SetDoorOpen(true);
     }
 
-    // Keep these methods compatible with existing GameManager references.
+    // Keep compatibility with existing GameManager calls.
     public void CloseDoor()
     {
-        if (!locked)
-            isOpen = false;
+        if (!Initialize() || locked)
+            return;
+
+        SetDoorOpen(false);
     }
 
     public void OpenDoor()
     {
-        if (!locked)
-            isOpen = true;
+        if (!Initialize() || locked)
+            return;
+
+        SetDoorOpen(true);
     }
 
-    private void PlayOpeningSound()
+    private void PlayDoorSound(bool opening)
     {
-        if (openingSpeaker == null)
-        {
-            openingSpeaker =
-                gameObject.AddComponent<AudioSource>();
+        if (speaker == null)
+            return;
 
-            openingSpeaker.playOnAwake = false;
-            openingSpeaker.spatialBlend = 0f;
-            openingSpeaker.loop = false;
+        AudioClip clip;
+
+        if (opening)
+        {
+            clip = doorOpenSound;
+
+            if (clip == null)
+            {
+                if (generatedOpen == null)
+                    generatedOpen = CreateDoorSound(true);
+
+                clip = generatedOpen;
+            }
+        }
+        else
+        {
+            clip = doorCloseSound;
+
+            if (clip == null)
+            {
+                if (generatedClose == null)
+                    generatedClose = CreateDoorSound(false);
+
+                clip = generatedClose;
+            }
         }
 
-        AudioClip clip = doorOpenSound;
+        speaker.Stop();
 
-        // Generate a basic impact if no opening sound is assigned.
-        if (clip == null)
-        {
-            if (generatedImpact == null)
-                generatedImpact = CreateImpactSound();
-
-            clip = generatedImpact;
-        }
-
-        openingSpeaker.PlayOneShot(clip, openingVolume);
+        speaker.PlayOneShot(
+            clip,
+            opening ? openingVolume : closingVolume);
     }
 
-    private AudioClip CreateImpactSound()
+    private static AudioClip CreateDoorSound(bool opening)
     {
-        const int sampleRate = 44100;
-        const float duration = 0.8f;
+        const int rate = 22050;
+        float duration = opening ? 0.9f : 0.4f;
 
         float[] samples =
-            new float[Mathf.CeilToInt(sampleRate * duration)];
+            new float[Mathf.CeilToInt(rate * duration)];
 
         System.Random random = new System.Random();
 
+        float filteredNoise = 0f;
+        float phase = 0f;
+
         for (int i = 0; i < samples.Length; i++)
         {
-            float time = i / (float)sampleRate;
-
-            float bass = Mathf.Sin(
-                2f * Mathf.PI * 65f * time
-            ) * Mathf.Exp(-time * 9f);
+            float t = i / (float)rate;
 
             float noise =
                 (float)(random.NextDouble() * 2.0 - 1.0);
 
-            float impact =
-                noise * Mathf.Exp(-time * 24f);
+            filteredNoise =
+                Mathf.Lerp(filteredNoise, noise, 0.22f);
 
-            float metallic = Mathf.Sin(
-                2f * Mathf.PI * 430f * time
-            ) * Mathf.Exp(-time * 7f);
+            float value;
 
-            float attack =
-                Mathf.Clamp01(time / 0.002f);
+            if (opening)
+            {
+                float frequency =
+                    165f +
+                    Mathf.Sin(t * 8f) * 55f +
+                    Mathf.Sin(t * 23f) * 12f;
 
-            samples[i] = Mathf.Clamp(
-                (bass * 0.55f +
-                 impact * 0.3f +
-                 metallic * 0.15f) * attack,
-                -1f,
-                1f
-            );
+                phase +=
+                    2f * Mathf.PI * frequency / rate;
+
+                float creak =
+                    Mathf.Sin(phase) * 0.55f +
+                    Mathf.Sin(phase * 2f) * 0.18f +
+                    Mathf.Sin(phase * 3f) * 0.07f;
+
+                float friction =
+                    0.55f +
+                    0.45f * Mathf.Abs(Mathf.Sin(t * 19f));
+
+                float envelope =
+                    Mathf.Clamp01(t / 0.06f) *
+                    Mathf.Clamp01((duration - t) / 0.2f);
+
+                value =
+                    (creak * 0.32f +
+                     filteredNoise * 0.16f) *
+                    friction * envelope;
+            }
+            else
+            {
+                float bass =
+                    Mathf.Sin(2f * Mathf.PI * 75f * t) *
+                    Mathf.Exp(-t * 18f);
+
+                float wood =
+                    Mathf.Sin(2f * Mathf.PI * 165f * t) *
+                    Mathf.Exp(-t * 32f);
+
+                float impact =
+                    filteredNoise * Mathf.Exp(-t * 42f);
+
+                float latchTime = t - 0.06f;
+                float latch = 0f;
+
+                if (latchTime >= 0f)
+                {
+                    latch =
+                        noise *
+                        Mathf.Exp(-latchTime * 90f) *
+                        0.15f;
+                }
+
+                value =
+                    (bass * 0.48f +
+                     wood * 0.15f +
+                     impact * 0.4f +
+                     latch) *
+                    Mathf.Clamp01(t / 0.002f) *
+                    Mathf.Clamp01((duration - t) / 0.05f);
+            }
+
+            samples[i] = Mathf.Clamp(value, -1f, 1f);
         }
 
         AudioClip clip = AudioClip.Create(
-            "Door Opening Impact",
+            opening ? "Generated Door Creak" : "Generated Door Close",
             samples.Length,
             1,
-            sampleRate,
-            false
-        );
+            rate,
+            false);
 
         clip.SetData(samples, 0);
         return clip;
@@ -339,29 +475,22 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
 
         GUI.depth = -100;
 
-        // Draw a soft red pulse.
-        float pulse = 0.5f + 0.5f *
+        float pulse =
+            0.5f + 0.5f *
             Mathf.Sin(Time.unscaledTime * Mathf.PI * 2f);
 
         GUI.color = new Color(
-            1f,
-            0.02f,
-            0.02f,
+            1f, 0.02f, 0.02f,
             Mathf.Lerp(
                 redFlashStrength * 0.2f,
                 redFlashStrength,
-                pulse
-            )
-        );
+                pulse));
 
-        GUI.DrawTexture(
-            new Rect(
-                0f, 0f,
-                Screen.width, Screen.height),
-            Texture2D.whiteTexture
-        );
+        Rect screen = new Rect(
+            0f, 0f, Screen.width, Screen.height);
 
-        // Draw subtle animated screen noise.
+        GUI.DrawTexture(screen, Texture2D.whiteTexture);
+
         CreateNoiseTexture();
 
         float frame =
@@ -371,44 +500,31 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
             new Color(1f, 1f, 1f, noiseStrength);
 
         GUI.DrawTextureWithTexCoords(
-            new Rect(
-                0f, 0f,
-                Screen.width, Screen.height),
+            screen,
             noiseTexture,
             new Rect(
                 Mathf.Repeat(frame * 0.37f, 1f),
                 Mathf.Repeat(frame * 0.61f, 1f),
                 Screen.width / 64f,
-                Screen.height / 64f
-            )
-        );
+                Screen.height / 64f));
 
-        // Draw the countdown above the screen effects.
         GUI.color = Color.white;
 
         if (countdownStyle == null)
         {
-            countdownStyle =
-                new GUIStyle(GUI.skin.label);
-
-            countdownStyle.alignment =
-                TextAnchor.MiddleCenter;
-
-            countdownStyle.fontStyle =
-                FontStyle.Bold;
+            countdownStyle = new GUIStyle(GUI.skin.label);
+            countdownStyle.alignment = TextAnchor.MiddleCenter;
+            countdownStyle.fontStyle = FontStyle.Bold;
         }
 
         countdownStyle.fontSize = Mathf.Max(
-            1,
-            Mathf.RoundToInt(Screen.height * 0.12f)
-        );
+            1, Mathf.RoundToInt(Screen.height * 0.12f));
 
         Rect area = new Rect(
             0f,
             Screen.height * 0.18f,
             Screen.width,
-            Screen.height * 0.2f
-        );
+            Screen.height * 0.2f);
 
         countdownStyle.normal.textColor =
             new Color(0f, 0f, 0f, 0.9f);
@@ -420,8 +536,7 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
                 area.width,
                 area.height),
             countdown.ToString(),
-            countdownStyle
-        );
+            countdownStyle);
 
         countdownStyle.normal.textColor =
             new Color(1f, 0.9f, 0.85f);
@@ -429,8 +544,7 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
         GUI.Label(
             area,
             countdown.ToString(),
-            countdownStyle
-        );
+            countdownStyle);
 
         GUI.color = oldColor;
         GUI.depth = oldDepth;
@@ -444,32 +558,20 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
         const int size = 64;
 
         noiseTexture = new Texture2D(
-            size,
-            size,
-            TextureFormat.RGBA32,
-            false
-        );
+            size, size, TextureFormat.RGBA32, false);
 
-        noiseTexture.wrapMode =
-            TextureWrapMode.Repeat;
+        noiseTexture.wrapMode = TextureWrapMode.Repeat;
+        noiseTexture.filterMode = FilterMode.Point;
 
-        noiseTexture.filterMode =
-            FilterMode.Point;
-
-        Color32[] pixels =
-            new Color32[size * size];
-
-        System.Random random =
-            new System.Random(7392);
+        Color32[] pixels = new Color32[size * size];
+        System.Random random = new System.Random(7392);
 
         for (int i = 0; i < pixels.Length; i++)
         {
-            byte value =
-                (byte)random.Next(0, 256);
+            byte value = (byte)random.Next(0, 256);
 
-            pixels[i] = new Color32(
-                value, value, value, 255
-            );
+            pixels[i] =
+                new Color32(value, value, value, 255);
         }
 
         noiseTexture.SetPixels32(pixels);
@@ -479,19 +581,37 @@ public class SafeRoomDoor : MonoBehaviour, IInteractable
     private void OnDisable()
     {
         StopAllCoroutines();
+
         countdown = -1;
         locked = false;
 
-        if (openingSpeaker != null)
-            openingSpeaker.Stop();
+        if (lockdownRunning)
+        {
+            timerStarted = false;
+            lockdownRunning = false;
+        }
+
+        Highlight(false);
+
+        if (speaker != null)
+            speaker.Stop();
     }
 
     private void OnDestroy()
     {
-        if (generatedImpact != null)
-            Destroy(generatedImpact);
+        leftFeedback?.Dispose();
+        rightFeedback?.Dispose();
+
+        if (generatedOpen != null)
+            Destroy(generatedOpen);
+
+        if (generatedClose != null)
+            Destroy(generatedClose);
 
         if (noiseTexture != null)
             Destroy(noiseTexture);
+
+        if (speaker != null)
+            Destroy(speaker);
     }
 }
