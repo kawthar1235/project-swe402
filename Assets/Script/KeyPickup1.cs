@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 public class KeyPickup : MonoBehaviour, IInteractable
 {
     public GameManager gameManager;
+    public InventoryUI inventoryUI;
     public Camera playerCamera;
     public Transform holdPoint;
 
@@ -180,6 +181,9 @@ public class KeyPickup : MonoBehaviour, IInteractable
         if (gameManager != null)
             gameManager.hasKey = true;
 
+        if (inventoryUI != null)
+            inventoryUI.CollectKey();
+
         feedback?.PlaySound(pickupVolume);
     }
 
@@ -235,6 +239,9 @@ public class KeyPickup : MonoBehaviour, IInteractable
 
         if (gameManager != null)
             gameManager.hasKey = false;
+
+        if (inventoryUI != null)
+            inventoryUI.UseKey();
     }
 
     private void OnDisable()

@@ -115,13 +115,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: s
+      name: Inventory
       rect:
         serializedVersion: 2
-        x: 21
-        y: 791
-        width: 304
-        height: 61
+        x: 582
+        y: 173
+        width: 450
+        height: 156
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -150,7 +150,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      s: 6913531750139570915
+      Inventory: 6913531750139570915
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
